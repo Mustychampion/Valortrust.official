@@ -30,13 +30,18 @@ try {
 const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT || "./serviceAccountKey.json";
 
 try {
-  const serviceAccount = require(serviceAccountPath);
+  let serviceAccount;
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  } else {
+    serviceAccount = require(serviceAccountPath);
+  }
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
 } catch (err) {
   // Fallback: use application default credentials (e.g. on Cloud Run, GCE)
-  console.warn("No service account file found, using application default credentials.");
+  console.warn("No service account file found or invalid JSON, using application default credentials.");
   admin.initializeApp();
 }
 
