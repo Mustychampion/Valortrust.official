@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — ValorTrust Integrated Services</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@600&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --gold:#C9973A;--gold-light:#F5E6C8;--dark:#1A1A1A;--surface:#F7F5F0;
+      --white:#FFFFFF;--border:#E2DDD5;--text:#2C2C2A;--muted:#7A7870;
+      --danger:#E24B4A;--success:#3B6D11;
+    }
+    body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);min-height:100vh;display:flex}
+    #auth-modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000}
+    #auth-modal.hidden{display:none}
+    .auth-box{background:var(--white);border-radius:16px;padding:40px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+    .auth-logo{font-family:'Playfair Display',serif;font-size:22px;color:var(--gold);text-align:center;margin-bottom:4px}
+    .auth-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:28px}
+    .auth-field{margin-bottom:16px}
+    .auth-field label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px}
+    .auth-field input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}
+    .auth-field input:focus{border-color:var(--gold)}
+    .auth-btn{width:100%;padding:12px;background:var(--gold);color:var(--dark);border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px}
+    .auth-btn:hover{background:#b8852f}
+    .auth-error{color:var(--danger);font-size:12px;text-align:center;margin-top:10px;display:none}
+    .sidebar{width:220px;min-height:100vh;background:var(--dark);display:flex;flex-direction:column;flex-shrink:0}
+    .sidebar-logo{padding:24px 20px 16px;border-bottom:1px solid #333}
+    .sidebar-logo .brand{font-family:'Playfair Display',serif;font-size:17px;color:var(--gold)}
+    .sidebar-logo .sub{font-size:11px;color:#666;margin-top:2px}
+    .nav{padding:16px 0;flex:1}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13.5px;color:#999;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+    .nav-item:hover{color:#ddd;background:#2a2a2a}
+    .nav-item.active{color:var(--gold);background:#2a2a2a;border-left-color:var(--gold)}
+    .nav-item i{font-size:17px}
+    .sidebar-bottom{padding:16px 20px;border-top:1px solid #333;display:flex;justify-content:space-between;align-items:center}
+    .admin-badge{display:flex;align-items:center;gap:8px}
+    .av{width:30px;height:30px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--dark)}
+    .admin-name{font-size:12px;color:#888}
+    .logout-btn{background:none;border:none;color:#666;cursor:pointer;font-size:18px}
+    .logout-btn:hover{color:#fff}
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+    .topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .page-title{font-size:16px;font-weight:600}
+    .btn{padding:7px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:all .15s}
+    .btn-primary{background:var(--gold);color:var(--dark)}
+    .btn-primary:hover{background:#b8852f}
+    .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+    .btn-sm{padding:5px 12px;font-size:12px}
+    .btn-danger{background:var(--danger);color:#fff;font-size:12px;padding:5px 10px}
+    .content{flex:1;padding:24px 28px;overflow-y:auto}
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+    .stat-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+    .stat-label{font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+    .stat-val{font-size:24px;font-weight:600}
+    .stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
+    .section{background:var(--white);border:1px solid var(--border);border-radius:10px;margin-bottom:20px}
+    .section-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .section-title{font-size:14px;font-weight:600}
+    .section-body{padding:20px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .form-full{grid-column:1/-1}
+    .field{display:flex;flex-direction:column;gap:5px}
+    .field label{font-size:12px;font-weight:500;color:var(--muted)}
+    .field input,.field textarea,.field select{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13.5px;font-family:inherit;color:var(--text);outline:none}
+    .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--gold)}
+    .field textarea{resize:vertical;min-height:90px}
+    .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:border-color .15s}
+    .upload-zone:hover{border-color:var(--gold)}
+    .upload-zone i{font-size:28px;color:var(--muted);display:block;margin-bottom:8px}
+    .upload-zone p{font-size:13px;color:var(--muted)}
+    .upload-zone span{font-size:11px;color:var(--gold);display:block;margin-top:4px}
+    .img-preview{width:100%;height:120px;object-fit:cover;border-radius:6px;margin-top:8px;display:none}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)}
+    td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:var(--surface)}
+    .badge{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+    .badge-new{background:#E6F1FB;color:#185FA5}
+    .badge-read{background:#EAF3DE;color:#3B6D11}
+    .badge-published{background:#EAF3DE;color:#3B6D11}
+    .badge-draft{background:#F1EFE8;color:#5F5E5A}
+    .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px}
+    .tab{padding:10px 18px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+    .tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+    .panel{display:none}
+    .panel.active{display:block}
+    .enquiry-card{border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;cursor:pointer;transition:border-color .15s}
+    .enquiry-card:hover{border-color:var(--gold)}
+    .enquiry-card.unread{border-left:3px solid var(--gold)}
+    .eq-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+    .eq-name{font-weight:600;font-size:14px}
+    .eq-date{font-size:11px;color:var(--muted)}
+    .eq-sector{font-size:12px;color:var(--gold);margin-bottom:4px}
+    .eq-msg{font-size:13px;color:var(--muted);line-height:1.5}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--white);border-radius:12px;width:560px;max-height:85vh;overflow-y:auto;padding:24px}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .modal-title{font-size:15px;font-weight:600}
+    .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)}
+    .toast{position:fixed;bottom:24px;right:24px;background:var(--dark);color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;display:none;z-index:999;border-left:3px solid var(--gold)}
+    .bar-item{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .bar-label{font-size:12px;min-width:100px;flex-shrink:0}
+    .bar-track{flex:1;height:7px;background:var(--surface);border-radius:4px;overflow:hidden}
+    .bar-fill{height:100%;background:var(--gold);border-radius:4px}
+    .bar-count{font-size:12px;color:var(--muted);min-width:24px;text-align:right}
+  </style>
+</head>
+<body>
+
+<!-- AUTH MODAL -->
+<div id="auth-modal">
+  <div class="auth-box">
+    <div class="auth-logo">ValorTrust</div>
+    <div class="auth-sub">Admin Dashboard · Integrated Services Ltd</div>
+    <div class="auth-field">
+      <label>Email Address</label>
+      <input type="email" id="login-email" placeholder="admin@valortrust.com">
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••">
+    </div>
+    <button class="auth-btn" id="login-btn">Log In</button>
+    <div class="auth-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar" style="display:none">
+  <div class="sidebar-logo">
+    <div class="brand">VTC Admin</div>
+    <div class="sub">ValorTrust Panel</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" onclick="showPanel('dashboard',this)"><i class="ti ti-layout-dashboard"></i><span>Dashboard</span></div>
+    <div class="nav-item" onclick="showPanel('blog',this)"><i class="ti ti-article"></i><span>Blog Posts</span></div>
+    <div class="nav-item" onclick="showPanel('portfolio',this)"><i class="ti ti-briefcase"></i><span>Portfolio</span></div>
+    <div class="nav-item" onclick="showPanel('testimonials',this)"><i class="ti ti-quote"></i><span>Testimonials</span></div>
+    <div class="nav-item" onclick="showPanel('enquiries',this)"><i class="ti ti-mail"></i><span>Enquiries</span></div>
+    <div class="nav-item" onclick="showPanel('analytics',this)"><i class="ti ti-chart-bar"></i><span>Analytics</span></div>
+    <div class="nav-item" onclick="showPanel('subscribers',this)"><i class="ti ti-users"></i><span>Subscribers</span></div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="admin-badge">
+      <div class="av">QM</div>
+      <div class="admin-name">Admin</div>
+    </div>
+    <button class="logout-btn" onclick="handleLogout()" title="Logout"><i class="ti ti-logout"></i></button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main" id="main-content" style="display:none">
+  <div class="topbar">
+    <div class="page-title" id="page-title">Dashboard Overview</div>
+    <div>
+      <button class="btn btn-primary btn-sm" id="new-btn" style="display:none" onclick="openNewForm()">
+        <i class="ti ti-plus" style="vertical-align:-2px"></i> New
+      </button>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Blog Posts</div><div class="stat-val" id="s-blogs">—</div></div>
+        <div class="stat-card"><div class="stat-label">Portfolio</div><div class="stat-val" id="s-portfolio">—</div></div>
+        <div class="stat-card"><div class="stat-label">Testimonials</div><div class="stat-val" id="s-testi">—</div></div>
+        <div class="stat-card"><div class="stat-label">Enquiries</div><div class="stat-val" id="s-enquiries">—</div><div class="stat-sub"><span id="s-unread">—</span> unread</div></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">Recent Enquiries</div></div>
+        <div class="section-body" id="recent-enquiries"></div>
+      </div>
+    </div>
+
+    <!-- BLOG -->
+    <div class="panel" id="panel-blog">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(this,'blog-list-tab')">All Posts</div>
+        <div class="tab" onclick="switchTab(this,'blog-form-tab')">New Post</div>
+      </div>
+      <div id="blog-list-tab">
+        <div class="table-wrap"><table>
+          <thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Date</th><th></th></tr></thead>
+          <tbody id="blog-table"></tbody>
+        </table></div>
+      </div>
+      <div id="blog-form-tab" style="display:none">
+        <div class="section"><div class="section-body">
+          <div class="form-grid">
+            <div class="field form-full"><label>Title</label><input type="text" id="b-title" placeholder="Post title"></div>
+            <div class="field"><label>Category</label>
+              <select id="b-category"><option>Digital Marketing</option><option>Construction</option><option>Agriculture</option><option>Solar Energy</option><option>Technology</option><option>Business</option></select>
+            </div>
+            <div class="field"><label>Status</label><select id="b-status"><option>published</option><option>draft</option></select></div>
+            <div class="field form-full"><label>Excerpt</label><textarea id="b-excerpt" placeholder="Short summary..."></textarea></div>
+            <div class="field form-full"><label>Full Content</label><textarea id="b-content" placeholder="Full article..." style="min-height:160px"></textarea></div>
+            <div class="field form-full"><label>Featured Image</label>
+              <div class="upload-zone" onclick="document.getElementById('b-img').click()">
+                <i class="ti ti-photo-up"></i><p>Click to upload</p><span>JPG, PNG · Max 5MB</span>
+                <input type="file" id="b-img" accept="image/*" style="display:none" onchange="previewImg(this,'b-preview')">
+                <img id="b-preview" class="img-preview">
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:10px">
+            <button class="btn btn-primary" onclick="saveBlog()">Publish</button>
+            <button class="btn btn-outline" onclick="saveBlogDraft()">Save Draft</button>
+          </div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- PORTFOLIO -->
+    <div class="panel" id="panel-portfolio">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(this,'port-list-tab')">All Projects</div>
+        <div class="tab" onclick="switchTab(this,'port-form-tab')">Add Project</div>
+      </div>
+      <div id="port-list-tab">
+        <div class="table-wrap"><table>
+          <thead><tr><th>Title</th><th>Category</th><th>Description</th><th></th></tr></thead>
+          <tbody id="port-table"></tbody>
+        </table></div>
+      </div>
+      <div id="port-form-tab" style="display:none">
+        <div class="section"><div class="section-body">
+          <div class="form-grid">
+            <div class="field form-full"><label>Project Title</label><input type="text" id="p-title" placeholder="Project name"></div>
+            <div class="field"><label>Category</label>
+              <select id="p-category"><option>Construction</option><option>Digital</option><option>Agriculture</option><option>Design</option><option>Solar Energy</option><option>Textile And Fabrics</option><option>Food And Agro Processing</option><option>Export And Global Trade</option><option>Consulting</option></select>
+            </div>
+            <div class="field"><label>External Link</label><input type="text" id="p-link" placeholder="https://..."></div>
+            <div class="field form-full"><label>Description</label><textarea id="p-desc" placeholder="Project description..."></textarea></div>
+            <div class="field form-full"><label>Project Image</label>
+              <div class="upload-zone" onclick="document.getElementById('p-img').click()">
+                <i class="ti ti-photo-up"></i><p>Click to upload</p><span>JPG, PNG · Max 5MB</span>
+                <input type="file" id="p-img" accept="image/*" style="display:none" onchange="previewImg(this,'p-preview')">
+                <img id="p-preview" class="img-preview">
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:16px"><button class="btn btn-primary" onclick="savePortfolio()">Add Project</button></div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- TESTIMONIALS -->
+    <div class="panel" id="panel-testimonials">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(this,'testi-list-tab')">All</div>
+        <div class="tab" onclick="switchTab(this,'testi-form-tab')">Add Testimonial</div>
+      </div>
+      <div id="testi-list-tab">
+        <div class="table-wrap"><table>
+          <thead><tr><th>Client</th><th>Role</th><th>Review</th><th></th></tr></thead>
+          <tbody id="testi-table"></tbody>
+        </table></div>
+      </div>
+      <div id="testi-form-tab" style="display:none">
+        <div class="section"><div class="section-body">
+          <div class="form-grid">
+            <div class="field"><label>Client Name</label><input type="text" id="t-name" placeholder="Full name"></div>
+            <div class="field"><label>Role & Company</label><input type="text" id="t-role" placeholder="CEO, Company Name"></div>
+            <div class="field form-full"><label>Testimonial</label><textarea id="t-text" placeholder="What they said..."></textarea></div>
+            <div class="field form-full"><label>Client Photo</label>
+              <div class="upload-zone" onclick="document.getElementById('t-img').click()">
+                <i class="ti ti-user-circle"></i><p>Click to upload photo</p><span>JPG, PNG · Max 2MB</span>
+                <input type="file" id="t-img" accept="image/*" style="display:none" onchange="previewImg(this,'t-preview')">
+                <img id="t-preview" class="img-preview" style="border-radius:50%;width:80px;height:80px">
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:16px"><button class="btn btn-primary" onclick="saveTestimonial()">Save</button></div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- ENQUIRIES -->
+    <div class="panel" id="panel-enquiries">
+      <div class="tabs">
+        <div class="tab active" onclick="filterEq('all',this)">All</div>
+        <div class="tab" onclick="filterEq('new',this)">New</div>
+        <div class="tab" onclick="filterEq('read',this)">Read</div>
+      </div>
+      <div id="eq-list"></div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="panel" id="panel-analytics">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Total Visits</div><div class="stat-val" id="a-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Unique IPs</div><div class="stat-val" id="a-unique">—</div></div>
+        <div class="stat-card"><div class="stat-label">Mobile</div><div class="stat-val" id="a-mobile">—</div></div>
+        <div class="stat-card"><div class="stat-label">Top Country</div><div class="stat-val" id="a-country">—</div></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">Visitor Log</div><button class="btn btn-outline btn-sm" onclick="exportVisitors()">Export CSV</button></div>
+        <div class="section-body" style="padding:0">
+          <div class="table-wrap"><table>
+            <thead><tr><th>IP</th><th>Country</th><th>City</th><th>ISP</th><th>ASN</th><th>Device</th><th>Visits</th><th>Last Seen</th></tr></thead>
+            <tbody id="analytics-table"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBSCRIBERS -->
+    <div class="panel" id="panel-subscribers">
+      <div class="section">
+        <div class="section-head"><div class="section-title">Newsletter Subscribers</div><button class="btn btn-outline btn-sm" onclick="exportSubscribers()">Export CSV</button></div>
+        <div class="section-body" style="padding:0">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Email</th><th>Date Subscribed</th></tr></thead>
+            <tbody id="sub-table"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Enquiry Modal -->
+<div class="modal-overlay" id="eq-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="eq-modal-name">Enquiry</div>
+      <button class="modal-close" onclick="document.getElementById('eq-modal').classList.remove('open')">×</button>
+    </div>
+    <div id="eq-modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+  const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL || '';
+  const SUPABASE_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || '';
+  const getMeta = (name) => document.querySelector(`meta[name="${name}"]`)?.content || '';
+  const supabaseUrl = SUPABASE_URL || getMeta('supabase-url');
+  const supabaseKey = SUPABASE_KEY || getMeta('supabase-key');
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  let allEnquiries = [];
+  let allVisitors = [];
+  let allSubscribers = [];
+  let channels = [];
+  let realtimeStarted = false;
+
+  // ── AUTH ──
+  async function checkAuth() {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) showDashboard();
+    else showLogin();
+  }
+
+  function showLogin() {
+    document.getElementById('auth-modal').style.display = 'flex';
+    document.getElementById('sidebar').style.display = 'none';
+    document.getElementById('main-content').style.display = 'none';
+  }
+
+  function showDashboard() {
+    document.getElementById('auth-modal').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'flex';
+    document.getElementById('main-content').style.display = 'flex';
+    loadDashboard();
+  }
+
+  document.getElementById('login-btn').addEventListener('click', async () => {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const err = document.getElementById('login-error');
+    err.style.display = 'none';
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { err.textContent = error.message; err.style.display = 'block'; }
+    else showDashboard();
+  });
+
+  window.handleLogout = async () => {
+    await supabase.auth.signOut();
+    cleanupRealtime();
+    realtimeStarted = false;
+    showLogin();
+  };
+
+  // ── REALTIME ──
+  function cleanupRealtime() {
+    channels.forEach(ch => supabase.removeChannel(ch));
+    channels = [];
+  }
+
+  function initRealtime() {
+    cleanupRealtime();
+
+    const eq = supabase
+      .channel('eq-' + Date.now())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'enquiries' }, (payload) => {
+        allEnquiries.unshift(payload.new);
+        const unread = allEnquiries.filter(e => e.status === 'new').length;
+        document.getElementById('s-enquiries').textContent = allEnquiries.length;
+        document.getElementById('s-unread').textContent = unread;
+        renderRecentEnquiries(allEnquiries.slice(0, 3));
+        showToast('New enquiry received!');
+      }).subscribe();
+
+    const vis = supabase
+      .channel('vis-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'visitor_logs' }, async () => {
+        if (document.getElementById('panel-analytics').classList.contains('active')) {
+          await loadAnalytics();
+        }
+      }).subscribe();
+
+    const sub = supabase
+      .channel('sub-' + Date.now())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'subscribers' }, (payload) => {
+        allSubscribers.unshift(payload.new);
+        if (document.getElementById('panel-subscribers').classList.contains('active')) {
+          loadSubscribers();
+        }
+        showToast('New newsletter subscriber!');
+      }).subscribe();
+
+    channels = [eq, vis, sub];
+  }
+
+  // ── DASHBOARD ──
+  async function loadDashboard() {
+    const [blogs, portfolio, testi, enquiries] = await Promise.all([
+      supabase.from('blog_posts').select('id', { count: 'exact' }),
+      supabase.from('portfolio').select('id', { count: 'exact' }),
+      supabase.from('testimonials').select('id', { count: 'exact' }),
+      supabase.from('enquiries').select('*').order('created_at', { ascending: false }),
+    ]);
+    document.getElementById('s-blogs').textContent = blogs.count || 0;
+    document.getElementById('s-portfolio').textContent = portfolio.count || 0;
+    document.getElementById('s-testi').textContent = testi.count || 0;
+    document.getElementById('s-enquiries').textContent = enquiries.data?.length || 0;
+    const unread = enquiries.data?.filter(e => e.status === 'new').length || 0;
+    document.getElementById('s-unread').textContent = unread;
+    allEnquiries = enquiries.data || [];
+    renderRecentEnquiries(allEnquiries.slice(0, 3));
+  }
+
+  // ── BLOG ──
+  async function loadBlog() {
+    const { data } = await supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
+    const tbody = document.getElementById('blog-table');
+    tbody.innerHTML = (data || []).map(b => `
+      <tr>
+        <td style="font-weight:500;max-width:200px">${b.title}</td>
+        <td>${b.category || ''}</td>
+        <td><span class="badge badge-${b.status}">${b.status}</span></td>
+        <td style="color:var(--muted)">${b.created_at?.split('T')[0] || ''}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteBlog('${b.id}')">Delete</button></td>
+      </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">No posts yet</td></tr>';
+  }
+
+  window.saveBlog = async () => {
+    const title = document.getElementById('b-title').value.trim();
+    if (!title) { showToast('Title is required'); return; }
+    const imgFile = document.getElementById('b-img').files[0];
+    let image_url = '';
+    if (imgFile) image_url = await uploadImage(imgFile, 'blog-images');
+    const slug = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    await supabase.from('blog_posts').insert([{
+      title,
+      category: document.getElementById('b-category').value,
+      status: document.getElementById('b-status').value,
+      excerpt: document.getElementById('b-excerpt').value,
+      content: document.getElementById('b-content').value,
+      image_url, slug,
+    }]);
+    showToast('Post published!');
+    loadBlog();
+    switchTab(document.querySelector('#panel-blog .tab'), 'blog-list-tab');
+  };
+
+  window.saveBlogDraft = () => {
+    document.getElementById('b-status').value = 'draft';
+    window.saveBlog();
+  };
+
+  window.deleteBlog = async (id) => {
+    await supabase.from('blog_posts').delete().eq('id', id);
+    showToast('Post deleted'); loadBlog();
+  };
+
+  // ── PORTFOLIO ──
+  async function loadPortfolio() {
+    const { data } = await supabase.from('portfolio').select('*').order('created_at', { ascending: false });
+    const tbody = document.getElementById('port-table');
+    tbody.innerHTML = (data || []).map(p => `
+      <tr>
+        <td style="font-weight:500">${p.title}</td>
+        <td>${p.category || ''}</td>
+        <td style="color:var(--muted);max-width:200px">${(p.description || '').substring(0, 60)}...</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deletePortfolio('${p.id}')">Delete</button></td>
+      </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">No projects yet</td></tr>';
+  }
+
+  window.savePortfolio = async () => {
+    const title = document.getElementById('p-title').value.trim();
+    if (!title) { showToast('Title is required'); return; }
+    const imgFile = document.getElementById('p-img').files[0];
+    let image_url = '';
+    if (imgFile) image_url = await uploadImage(imgFile, 'portfolio-images');
+    await supabase.from('portfolio').insert([{
+      title,
+      category: document.getElementById('p-category').value,
+      description: document.getElementById('p-desc').value,
+      link: document.getElementById('p-link').value,
+      image_url,
+    }]);
+    showToast('Project added!'); loadPortfolio();
+  };
+
+  window.deletePortfolio = async (id) => {
+    await supabase.from('portfolio').delete().eq('id', id);
+    showToast('Deleted'); loadPortfolio();
+  };
+
+  // ── TESTIMONIALS ──
+  async function loadTestimonials() {
+    const { data } = await supabase.from('testimonials').select('*').order('created_at', { ascending: false });
+    const tbody = document.getElementById('testi-table');
+    tbody.innerHTML = (data || []).map(t => `
+      <tr>
+        <td style="font-weight:500">${t.client_name}</td>
+        <td style="color:var(--muted)">${t.role || ''}</td>
+        <td style="color:var(--muted);max-width:220px">"${(t.review_text || '').substring(0, 60)}..."</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteTestimonial('${t.id}')">Delete</button></td>
+      </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">No testimonials yet</td></tr>';
+  }
+
+  window.saveTestimonial = async () => {
+    const name = document.getElementById('t-name').value.trim();
+    const text = document.getElementById('t-text').value.trim();
+    if (!name || !text) { showToast('Name and review are required'); return; }
+    const imgFile = document.getElementById('t-img').files[0];
+    let photo_url = '';
+    if (imgFile) photo_url = await uploadImage(imgFile, 'testimonial-photos');
+    await supabase.from('testimonials').insert([{
+      client_name: name,
+      role: document.getElementById('t-role').value,
+      review_text: text,
+      photo_url,
+    }]);
+    showToast('Testimonial saved!'); loadTestimonials();
+  };
+
+  window.deleteTestimonial = async (id) => {
+    await supabase.from('testimonials').delete().eq('id', id);
+    showToast('Deleted'); loadTestimonials();
+  };
+
+  // ── ENQUIRIES ──
+  function renderRecentEnquiries(list) {
+    const el = document.getElementById('recent-enquiries');
+    el.innerHTML = list.map(e => `
+      <div class="enquiry-card ${e.status === 'new' ? 'unread' : ''}" onclick="openEnquiry('${e.id}')">
+        <div class="eq-head"><div class="eq-name">${e.name}</div><span class="badge badge-${e.status === 'new' ? 'new' : 'read'}">${e.status}</span></div>
+        <div class="eq-sector">${e.sector || ''}</div>
+        <div class="eq-msg">${(e.message || '').substring(0, 100)}...</div>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:13px">No enquiries yet</div>';
+  }
+
+  window.filterEq = (filter, el) => {
+    document.querySelectorAll('#panel-enquiries .tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const list = filter === 'all' ? allEnquiries : allEnquiries.filter(e => e.status === filter);
+    document.getElementById('eq-list').innerHTML = list.map(e => `
+      <div class="enquiry-card ${e.status === 'new' ? 'unread' : ''}" onclick="openEnquiry('${e.id}')">
+        <div class="eq-head"><div class="eq-name">${e.name}</div><div style="display:flex;gap:6px;align-items:center"><span class="badge badge-${e.status === 'new' ? 'new' : 'read'}">${e.status}</span><span class="eq-date">${e.created_at?.split('T')[0]}</span></div></div>
+        <div class="eq-sector">${e.sector || ''}</div>
+        <div class="eq-msg">${e.message || ''}</div>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:13px;padding:20px">No enquiries found</div>';
+  };
+
+  window.openEnquiry = async (id) => {
+    const e = allEnquiries.find(x => x.id === id);
+    if (!e) return;
+    await supabase.from('enquiries').update({ status: 'read' }).eq('id', id);
+    e.status = 'read';
+    document.getElementById('eq-modal-name').textContent = e.name;
+    document.getElementById('eq-modal-body').innerHTML = `
+      <div style="display:grid;gap:12px">
+        <div class="field"><label>Sector</label><div style="padding:8px 12px;background:var(--surface);border-radius:6px;font-size:13.5px">${e.sector || 'N/A'}</div></div>
+        <div class="field"><label>Email</label><div style="padding:8px 12px;background:var(--surface);border-radius:6px"><a href="mailto:${e.email}" style="color:var(--gold)">${e.email}</a></div></div>
+        <div class="field"><label>Phone</label><div style="padding:8px 12px;background:var(--surface);border-radius:6px"><a href="tel:${e.phone}" style="color:var(--gold)">${e.phone || 'N/A'}</a></div></div>
+        <div class="field"><label>Message</label><div style="padding:12px;background:var(--surface);border-radius:6px;line-height:1.6;font-size:13.5px">${e.message}</div></div>
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <a href="mailto:${e.email}" class="btn btn-primary">Reply via Email</a>
+          <a href="https://wa.me/+234${(e.phone || '').replace(/^0/, '')}" class="btn btn-outline" target="_blank">WhatsApp</a>
+        </div>
+      </div>`;
+    document.getElementById('eq-modal').classList.add('open');
+  };
+
+  // ── ANALYTICS ──
+  async function loadAnalytics() {
+    const { data } = await supabase.from('visitor_logs').select('*').order('last_seen', { ascending: false });
+    allVisitors = data || [];
+    const total = allVisitors.reduce((sum, v) => sum + (v.visit_count || 1), 0);
+    const mobile = allVisitors.filter(v => v.device === 'Mobile').length;
+    const countries = allVisitors.map(v => v.country).filter(Boolean);
+    const topCountry = countries.sort((a, b) => countries.filter(c => c === b).length - countries.filter(c => c === a).length)[0] || '—';
+    document.getElementById('a-total').textContent = total;
+    document.getElementById('a-unique').textContent = allVisitors.length;
+    document.getElementById('a-mobile').textContent = mobile;
+    document.getElementById('a-country').textContent = topCountry;
+    const tbody = document.getElementById('analytics-table');
+    tbody.innerHTML = allVisitors.map(v => `
+      <tr>
+        <td style="font-family:monospace;font-size:11.5px">${v.ip_address || ''}</td>
+        <td>${v.country || ''}</td>
+        <td>${v.city || ''}</td>
+        <td style="color:var(--muted)">${v.isp || ''}</td>
+        <td style="font-family:monospace;font-size:11px;color:#185FA5">${v.asn || ''}</td>
+        <td>${v.device || ''}</td>
+        <td style="text-align:center;font-weight:500">${v.visit_count || 1}</td>
+        <td style="color:var(--muted)">${v.last_seen?.split('T')[0] || ''}</td>
+      </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">No visitors yet</td></tr>';
+  }
+
+  window.exportVisitors = () => {
+    const csv = ['IP,Country,City,ISP,ASN,Device,Visits,Last Seen',
+      ...allVisitors.map(v => `${v.ip_address},${v.country},${v.city},${v.isp},${v.asn},${v.device},${v.visit_count},${v.last_seen?.split('T')[0]}`)
+    ].join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'visitors.csv'; a.click();
+  };
+
+  // ── SUBSCRIBERS ──
+  async function loadSubscribers() {
+    const { data } = await supabase.from('subscribers').select('*').order('created_at', { ascending: false });
+    allSubscribers = data || [];
+    const tbody = document.getElementById('sub-table');
+    tbody.innerHTML = allSubscribers.map(s => `
+      <tr>
+        <td>${s.email}</td>
+        <td style="color:var(--muted)">${s.created_at?.split('T')[0] || ''}</td>
+      </tr>`).join('') || '<tr><td colspan="2" style="text-align:center;padding:20px;color:var(--muted)">No subscribers yet</td></tr>';
+  }
+
+  window.exportSubscribers = () => {
+    const csv = ['Email,Date', ...allSubscribers.map(s => `${s.email},${s.created_at?.split('T')[0]}`)].join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'subscribers.csv'; a.click();
+  };
+
+  // ── IMAGE UPLOAD ──
+  async function uploadImage(file, bucket) {
+    const ext = file.name.split('.').pop();
+    const name = `${Date.now()}.${ext}`;
+    const { data, error } = await supabase.storage.from(bucket).upload(name, file);
+    if (error) { showToast('Image upload failed'); return ''; }
+    const { data: url } = supabase.storage.from(bucket).getPublicUrl(name);
+    return url.publicUrl;
+  }
+
+  // ── UI HELPERS ──
+  window.showPanel = (name, el) => {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    el.classList.add('active');
+    const titles = { dashboard: 'Dashboard Overview', blog: 'Blog Posts', portfolio: 'Portfolio', testimonials: 'Testimonials', enquiries: 'Enquiries', analytics: 'Visitor Analytics', subscribers: 'Subscribers' };
+    document.getElementById('page-title').textContent = titles[name] || name;
+    document.getElementById('new-btn').style.display = ['blog', 'portfolio', 'testimonials'].includes(name) ? '' : 'none';
+    if (name === 'blog') loadBlog();
+    if (name === 'portfolio') loadPortfolio();
+    if (name === 'testimonials') loadTestimonials();
+    if (name === 'enquiries') { filterEq('all', document.querySelector('#panel-enquiries .tab')); }
+    if (name === 'analytics') loadAnalytics();
+    if (name === 'subscribers') loadSubscribers();
+  };
+
+  window.switchTab = (el, targetId) => {
+    const panel = el.closest('.panel');
+    panel.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    [...panel.querySelectorAll('.tabs ~ div')].forEach(d => d.style.display = 'none');
+    const t = document.getElementById(targetId);
+    if (t) t.style.display = 'block';
+  };
+
+  window.openNewForm = () => {
+    const active = document.querySelector('.panel.active').id;
+    if (active === 'panel-blog') switchTab(document.querySelectorAll('#panel-blog .tab')[1], 'blog-form-tab');
+    if (active === 'panel-portfolio') switchTab(document.querySelectorAll('#panel-portfolio .tab')[1], 'port-form-tab');
+    if (active === 'panel-testimonials') switchTab(document.querySelectorAll('#panel-testimonials .tab')[1], 'testi-form-tab');
+  };
+
+  window.previewImg = (input, previewId) => {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById(previewId);
+      img.src = e.target.result;
+      img.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  };
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
+  }
+  window.showToast = showToast;
+
+  // ── SINGLE INIT ──
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_IN' && !realtimeStarted) {
+      realtimeStarted = true;
+      initRealtime();
+    }
+    if (event === 'SIGNED_OUT') {
+      realtimeStarted = false;
+      cleanupRealtime();
+    }
+  });
+
+  checkAuth();
+</script>
+</body>
+</html>

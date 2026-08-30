@@ -1,0 +1,37 @@
+{
+  "name": "valortrust-integrated-services",
+  "version": "1.0.0",
+  "description": "ValorTrust Integrated Services Ltd",
+  "scripts": {
+    "dev": "vite",
+    "dev:all": "concurrently -k \"npm run dev -- --host 127.0.0.1 --port 5173\" \"cd ../portpolio && npm run dev -- --host 127.0.0.1 --port 5174\"",
+    "server": "node server.js",
+    "start": "node server.js",
+    "dev:full": "concurrently -k \"npm run server\" \"npm run dev:all\"",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "firebase": "^11.0.0",
+    "firebase-admin": "^12.0.0"
+  },
+
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^8.60.0",
+    "@typescript-eslint/parser": "^8.60.0",
+    "autoprefixer": "^10.4.17",
+    "concurrently": "^9.0.1",
+    "eslint": "^8.56.0",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^8.0.14",
+    "vite-plugin-html": "^3.2.1"
+  }
+}

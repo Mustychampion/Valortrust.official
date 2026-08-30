@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.env
+.env.local
+# Firebase Admin service account — NEVER commit this file
+serviceAccountKey*.json
+.DS_Store
+*.log
+
+# Ignore embedded git repositories and worktrees
+portpolio/
+valortrust.parent-main.worktrees/
+
+# Ignore empty marker files
+findstr
+notepad
+powershell
+p.id
+type

@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: valortrust-website
+    region: oregon
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FIREBASE_SERVICE_ACCOUNT
+        fromSecret: FIREBASE_SERVICE_ACCOUNT
+      - key: VITE_FIREBASE_API_KEY
+        fromSecret: VITE_FIREBASE_API_KEY
+      - key: VITE_FIREBASE_AUTH_DOMAIN
+        fromSecret: VITE_FIREBASE_AUTH_DOMAIN
+      - key: VITE_FIREBASE_PROJECT_ID
+        fromSecret: VITE_FIREBASE_PROJECT_ID
+      - key: VITE_FIREBASE_STORAGE_BUCKET
+        fromSecret: VITE_FIREBASE_STORAGE_BUCKET
+      - key: VITE_FIREBASE_MESSAGING_SENDER_ID
+        fromSecret: VITE_FIREBASE_MESSAGING_SENDER_ID
+      - key: VITE_FIREBASE_APP_ID
+        fromSecret: VITE_FIREBASE_APP_ID
+    autoDeploy: true
