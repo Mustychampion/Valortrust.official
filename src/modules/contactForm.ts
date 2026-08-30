@@ -1,5 +1,5 @@
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 
 export async function initContactForm(): Promise<void> {
   const form = document.querySelector('#contact form') as HTMLFormElement | null;
