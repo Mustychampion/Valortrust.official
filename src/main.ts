@@ -3,6 +3,10 @@ import { initContactForm } from './modules/contactForm';
 import { initNewsletter } from './modules/newsletter';
 import { initNavigation } from './modules/navigation';
 import { initAnimations } from './modules/animations';
+import { inject } from '@vercel/analytics';
+
+// Initialize Vercel Web Analytics
+inject();
 
 document.addEventListener('DOMContentLoaded', () => {
   // Remove preloader immediately — don't wait for data fetches
