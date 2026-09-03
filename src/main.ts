@@ -1,3 +1,4 @@
+import { initSeoRuntime } from './utils/seoRuntime';
 import './styles/main.css';
 import { initContactForm } from './modules/contactForm';
 import { initNewsletter } from './modules/newsletter';
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initContactForm();
   initNewsletter();
   initAnimations();
+  initSeoRuntime();
 
   // 2. Defer heavy Firestore data loads — fire-and-forget, non-blocking
   requestIdleCallback(() => {
