@@ -1,6 +1,7 @@
 import { db } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { sendNotificationAlert } from '../lib/notifications';
+import { showPopupNotification } from '../utils/toast';
 
 export async function initContactForm(): Promise<void> {
   const form = document.querySelector('#contact form') as HTMLFormElement | null;
@@ -36,7 +37,14 @@ export async function initContactForm(): Promise<void> {
         message: data.message,
       });
 
-      // Show success message
+      // Show visitor popup notification
+      showPopupNotification({
+        title: 'Message Sent Successfully!',
+        message: 'Thank you for contacting ValorTrust. Our team has received your message and will get back to you promptly.',
+        type: 'success',
+      });
+
+      // Show success state on submit button
       btn.innerText = '✓ Message Sent!';
       btn.style.background = '#16a34a';
       form.reset();
@@ -49,6 +57,11 @@ export async function initContactForm(): Promise<void> {
 
     } catch (err) {
       console.error('Contact form error:', err);
+      showPopupNotification({
+        title: 'Submission Failed',
+        message: 'Unable to deliver your message at this time. Please check your connection or contact us directly via phone or WhatsApp.',
+        type: 'error',
+      });
       btn.innerText = 'Failed — Try Again';
       btn.style.background = '#dc2626';
       setTimeout(() => {

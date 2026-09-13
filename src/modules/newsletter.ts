@@ -1,6 +1,7 @@
 import { db } from '../lib/firebase';
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { sendNotificationAlert } from '../lib/notifications';
+import { showPopupNotification } from '../utils/toast';
 
 export function initNewsletter() {
   const section = document.querySelector('.py-16.bg-blue-900.text-white form');
@@ -35,6 +36,13 @@ export function initNewsletter() {
         message: 'New newsletter subscriber registered.',
       });
 
+      // Show visitor popup notification
+      showPopupNotification({
+        title: 'Subscribed Successfully!',
+        message: 'Thank you for subscribing to ValorTrust insights. You will receive updates directly to your inbox.',
+        type: 'success',
+      });
+
       submitBtn.innerHTML = '<i class="fas fa-check text-green-500 text-xl bounce-animation"></i>';
       emailInput.value = '';
 
@@ -45,6 +53,11 @@ export function initNewsletter() {
 
     } catch (err) {
       console.error('Newsletter error:', err);
+      showPopupNotification({
+        title: 'Subscription Failed',
+        message: 'Could not complete your subscription. Please check your email and try again.',
+        type: 'error',
+      });
       submitBtn.disabled = false;
       submitBtn.innerHTML = 'Error';
     }
