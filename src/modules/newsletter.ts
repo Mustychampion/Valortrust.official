@@ -22,25 +22,17 @@ export function initNewsletter() {
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
     try {
-      // Check if already subscribed (replaces Supabase unique constraint)
-      const existingQuery = query(
-        collection(db, 'subscribers'),
-        where('email', '==', email)
-      );
-      const snapshot = await getDocs(existingQuery);
-
-      if (snapshot.empty) {
-        await addDoc(collection(db, 'subscribers'), {
-          email,
-          created_at: new Date().toISOString(),
-        });
-      }
+      // Direct insertion (public write allowed by Firestore security rules)
+      await addDoc(collection(db, 'subscribers'), {
+        email,
+        created_at: new Date().toISOString(),
+      });
 
       // Notify owner via email + WhatsApp — non-blocking
       void sendNotificationAlert({
         type: 'newsletter',
         email,
-        message: snapshot.empty ? 'New subscriber added.' : 'Subscriber already existed (duplicate attempt).',
+        message: 'New newsletter subscriber registered.',
       });
 
       submitBtn.innerHTML = '<i class="fas fa-check text-green-500 text-xl bounce-animation"></i>';

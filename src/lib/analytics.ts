@@ -76,40 +76,24 @@ export async function trackVisitor(): Promise<void> {
   try {
     const info = await getVisitorInfo();
 
-    // Check if this IP was already logged today
-    const today = new Date().toISOString().split('T')[0];
-    const visitorQuery = query(
-      collection(db, 'visitor_logs'),
-      where('ip_address', '==', info.ip_address),
-    );
-    const snapshot = await getDocs(visitorQuery);
+    // Check returning status and visit count via localStorage to avoid unauthenticated read restrictions
+    const isReturning = Boolean(localStorage.getItem('vt_has_visited'));
+    const currentVisits = parseInt(localStorage.getItem('vt_visit_count') || '0', 10) + 1;
+    
+    localStorage.setItem('vt_has_visited', 'true');
+    localStorage.setItem('vt_visit_count', currentVisits.toString());
+    localStorage.setItem('vt_last_seen', new Date().toISOString());
 
-    // Find an existing record from today
-    const todayDoc = snapshot.docs.find(d => {
-      const lastSeen = d.data().last_seen as string;
-      return lastSeen && lastSeen.startsWith(today);
+    // Insert visitor record directly into Firestore
+    await addDoc(collection(db, 'visitor_logs'), {
+      ...info,
+      visit_count: currentVisits,
+      last_seen: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      is_returning: isReturning,
+      path_history: [window.location.pathname],
     });
-
-    if (todayDoc) {
-      // Update visit count
-      const existingData = todayDoc.data();
-      await updateDoc(doc(db, 'visitor_logs', todayDoc.id), {
-        visit_count: ((existingData.visit_count as number) || 1) + 1,
-        last_seen: new Date().toISOString(),
-        is_returning: true,
-      });
-    } else {
-      // Insert new visitor
-      await addDoc(collection(db, 'visitor_logs'), {
-        ...info,
-        visit_count: 1,
-        last_seen: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        is_returning: snapshot.size > 0, // returning if they have any previous records
-        path_history: [window.location.pathname],
-      });
-    }
-  } catch {
-    // Analytics should never break the site — fail silently
+  } catch (err) {
+    console.warn('Analytics tracking notice:', err);
   }
 }

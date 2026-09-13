@@ -32,8 +32,14 @@ document.addEventListener('DOMContentLoaded', () => {
     import('./modules/testimonials').then(m => m.loadTestimonials());
   }, { timeout: 2000 });
 
-  // 3. Defer analytics — runs only when browser is idle
-  requestIdleCallback(() => {
-    import('./lib/analytics').then(m => m.trackVisitor());
-  }, { timeout: 5000 });
+  // 3. Trigger analytics tracking (cross-browser compatible, non-blocking)
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    window.requestIdleCallback(() => {
+      import('./lib/analytics').then(m => m.trackVisitor());
+    }, { timeout: 2000 });
+  } else {
+    setTimeout(() => {
+      import('./lib/analytics').then(m => m.trackVisitor());
+    }, 500);
+  }
 });
