@@ -671,7 +671,7 @@
     const snap = await getDocs(query(collection(db, 'visitor_logs'), orderBy('last_seen', 'desc')));
     allVisitors = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const total = allVisitors.reduce((sum, v) => sum + (v.visit_count || 1), 0);
-    const mobile = allVisitors.filter(v => v.device === 'Mobile').length;
+    const mobile = allVisitors.filter(v => (v.device || v.device_type) === 'Mobile').length;
     const countries = allVisitors.map(v => v.country).filter(Boolean);
     const topCountry = countries.sort((a, b) => countries.filter(c => c === b).length - countries.filter(c => c === a).length)[0] || '—';
     document.getElementById('a-total').textContent = total;
@@ -681,20 +681,20 @@
     const tbody = document.getElementById('analytics-table');
     tbody.innerHTML = allVisitors.map(v => `
       <tr>
-        <td style="font-family:monospace;font-size:11.5px">${v.ip_address || ''}</td>
-        <td>${v.country || ''}</td>
-        <td>${v.city || ''}</td>
-        <td style="color:var(--muted)">${v.isp || ''}</td>
-        <td style="font-family:monospace;font-size:11px;color:#185FA5">${v.asn || ''}</td>
-        <td>${v.device || ''}</td>
-        <td style="text-align:center;font-weight:500">${v.visit_count || 1}</td>
-        <td style="color:var(--muted)">${formatDate(v.last_seen)}</td>
+        <td style="font-family:monospace;font-size:11.5px">${v.ip_address || v.ip || '—'}</td>
+        <td><strong>${v.country || '—'}</strong></td>
+        <td>${v.city || '—'}</td>
+        <td style="color:var(--muted)">${v.isp || '—'}</td>
+        <td style="font-family:monospace;font-size:11px;color:#185FA5">${v.asn || '—'}</td>
+        <td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;background:${(v.device || v.device_type) === 'Mobile' ? '#e0f2fe;color:#0369a1' : '#f1f5f9;color:#475569'}">${v.device || v.device_type || 'Desktop'}</span></td>
+        <td style="text-align:center;font-weight:600">${v.visit_count || 1}</td>
+        <td style="color:var(--muted)">${formatDate(v.last_seen || v.created_at)}</td>
       </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">No visitors yet</td></tr>';
   }
 
   window.exportVisitors = () => {
     const csv = ['IP,Country,City,ISP,ASN,Device,Visits,Last Seen',
-      ...allVisitors.map(v => `${v.ip_address},${v.country},${v.city},${v.isp},${v.asn},${v.device},${v.visit_count},${formatDate(v.last_seen)}`)
+      ...allVisitors.map(v => `${v.ip_address || v.ip || ''},${v.country || ''},${v.city || ''},${v.isp || ''},${v.asn || ''},${v.device || v.device_type || 'Desktop'},${v.visit_count || 1},${formatDate(v.last_seen || v.created_at)}`)
     ].join('\n');
     const a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
