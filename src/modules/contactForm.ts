@@ -1,5 +1,6 @@
 import { db } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { sendNotificationAlert } from '../lib/notifications';
 
 export async function initContactForm(): Promise<void> {
   const form = document.querySelector('#contact form') as HTMLFormElement | null;
@@ -24,6 +25,16 @@ export async function initContactForm(): Promise<void> {
 
     try {
       await addDoc(collection(db, 'enquiries'), data);
+
+      // Fire multi-channel notification (email + WhatsApp) — non-blocking
+      void sendNotificationAlert({
+        type: 'contact',
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        sector: data.sector,
+        message: data.message,
+      });
 
       // Show success message
       btn.innerText = '✓ Message Sent!';

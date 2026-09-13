@@ -345,27 +345,72 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js';
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+  } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js';
+  import {
+    getFirestore,
+    collection,
+    getDocs,
+    addDoc,
+    deleteDoc,
+    updateDoc,
+    doc,
+    query,
+    orderBy,
+    onSnapshot,
+    serverTimestamp
+  } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js';
+  import {
+    getStorage,
+    ref,
+    uploadBytes,
+    getDownloadURL
+  } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-storage.js';
 
-  const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL || '';
-  const SUPABASE_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || '';
-  const getMeta = (name) => document.querySelector(`meta[name="${name}"]`)?.content || '';
-  const supabaseUrl = SUPABASE_URL || getMeta('supabase-url');
-  const supabaseKey = SUPABASE_KEY || getMeta('supabase-key');
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const firebaseConfig = {
+    apiKey: "AIzaSyDURgFVcDnfzGdr-Z-uPDYcq4FNSYWlBcc",
+    authDomain: "valortrust.firebaseapp.com",
+    projectId: "valortrust",
+    storageBucket: "valortrust.firebasestorage.app",
+    messagingSenderId: "1023055310780",
+    appId: "1:1023055310780:web:fd1afab93f4b146abf05b9"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
 
   let allEnquiries = [];
   let allVisitors = [];
   let allSubscribers = [];
-  let channels = [];
+  let unsubscribers = [];
   let realtimeStarted = false;
 
-  // ── AUTH ──
-  async function checkAuth() {
-    const { data } = await supabase.auth.getSession();
-    if (data.session) showDashboard();
-    else showLogin();
+  // ── HELPER: format Firestore Timestamp or ISO string ──
+  function formatDate(val) {
+    if (!val) return '';
+    if (val && typeof val.toDate === 'function') return val.toDate().toISOString().split('T')[0];
+    if (typeof val === 'string') return val.split('T')[0];
+    return '';
   }
+
+  // ── AUTH ──
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      showDashboard();
+      if (!realtimeStarted) { realtimeStarted = true; initRealtime(); }
+    } else {
+      showLogin();
+      cleanupRealtime();
+      realtimeStarted = false;
+    }
+  });
 
   function showLogin() {
     document.getElementById('auth-modal').style.display = 'flex';
@@ -385,87 +430,92 @@
     const password = document.getElementById('login-password').value;
     const err = document.getElementById('login-error');
     err.style.display = 'none';
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { err.textContent = error.message; err.style.display = 'block'; }
-    else showDashboard();
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      err.textContent = error.message;
+      err.style.display = 'block';
+    }
   });
 
   window.handleLogout = async () => {
-    await supabase.auth.signOut();
     cleanupRealtime();
     realtimeStarted = false;
-    showLogin();
+    await signOut(auth);
   };
 
-  // ── REALTIME ──
+  // ── REALTIME (Firestore onSnapshot) ──
   function cleanupRealtime() {
-    channels.forEach(ch => supabase.removeChannel(ch));
-    channels = [];
+    unsubscribers.forEach(unsub => unsub());
+    unsubscribers = [];
   }
 
   function initRealtime() {
     cleanupRealtime();
 
-    const eq = supabase
-      .channel('eq-' + Date.now())
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'enquiries' }, (payload) => {
-        allEnquiries.unshift(payload.new);
+    // Enquiries live feed
+    const eqUnsub = onSnapshot(
+      query(collection(db, 'enquiries'), orderBy('created_at', 'desc')),
+      (snap) => {
+        allEnquiries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         const unread = allEnquiries.filter(e => e.status === 'new').length;
         document.getElementById('s-enquiries').textContent = allEnquiries.length;
         document.getElementById('s-unread').textContent = unread;
         renderRecentEnquiries(allEnquiries.slice(0, 3));
-        showToast('New enquiry received!');
-      }).subscribe();
+      }
+    );
 
-    const vis = supabase
-      .channel('vis-' + Date.now())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'visitor_logs' }, async () => {
-        if (document.getElementById('panel-analytics').classList.contains('active')) {
-          await loadAnalytics();
-        }
-      }).subscribe();
+    // Analytics live feed
+    const visUnsub = onSnapshot(collection(db, 'visitor_logs'), async () => {
+      if (document.getElementById('panel-analytics').classList.contains('active')) {
+        await loadAnalytics();
+      }
+    });
 
-    const sub = supabase
-      .channel('sub-' + Date.now())
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'subscribers' }, (payload) => {
-        allSubscribers.unshift(payload.new);
+    // Subscribers live feed
+    const subUnsub = onSnapshot(
+      query(collection(db, 'subscribers'), orderBy('created_at', 'desc')),
+      (snap) => {
+        allSubscribers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         if (document.getElementById('panel-subscribers').classList.contains('active')) {
-          loadSubscribers();
+          renderSubscribers();
         }
         showToast('New newsletter subscriber!');
-      }).subscribe();
+      }
+    );
 
-    channels = [eq, vis, sub];
+    unsubscribers = [eqUnsub, visUnsub, subUnsub];
   }
 
   // ── DASHBOARD ──
   async function loadDashboard() {
-    const [blogs, portfolio, testi, enquiries] = await Promise.all([
-      supabase.from('blog_posts').select('id', { count: 'exact' }),
-      supabase.from('portfolio').select('id', { count: 'exact' }),
-      supabase.from('testimonials').select('id', { count: 'exact' }),
-      supabase.from('enquiries').select('*').order('created_at', { ascending: false }),
+    const [blogsSnap, portSnap, testiSnap, enquiriesSnap] = await Promise.all([
+      getDocs(collection(db, 'blog_posts')),
+      getDocs(collection(db, 'portfolio')),
+      getDocs(collection(db, 'testimonials')),
+      getDocs(query(collection(db, 'enquiries'), orderBy('created_at', 'desc'))),
     ]);
-    document.getElementById('s-blogs').textContent = blogs.count || 0;
-    document.getElementById('s-portfolio').textContent = portfolio.count || 0;
-    document.getElementById('s-testi').textContent = testi.count || 0;
-    document.getElementById('s-enquiries').textContent = enquiries.data?.length || 0;
-    const unread = enquiries.data?.filter(e => e.status === 'new').length || 0;
+    document.getElementById('s-blogs').textContent = blogsSnap.size;
+    document.getElementById('s-portfolio').textContent = portSnap.size;
+    document.getElementById('s-testi').textContent = testiSnap.size;
+    allEnquiries = enquiriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    document.getElementById('s-enquiries').textContent = allEnquiries.length;
+    const unread = allEnquiries.filter(e => e.status === 'new').length;
     document.getElementById('s-unread').textContent = unread;
-    allEnquiries = enquiries.data || [];
     renderRecentEnquiries(allEnquiries.slice(0, 3));
   }
 
   // ── BLOG ──
   async function loadBlog() {
-    const { data } = await supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
+    const snap = await getDocs(query(collection(db, 'blog_posts'), orderBy('created_at', 'desc')));
+    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const tbody = document.getElementById('blog-table');
-    tbody.innerHTML = (data || []).map(b => `
+    tbody.innerHTML = data.map(b => `
       <tr>
         <td style="font-weight:500;max-width:200px">${b.title}</td>
         <td>${b.category || ''}</td>
         <td><span class="badge badge-${b.status}">${b.status}</span></td>
-        <td style="color:var(--muted)">${b.created_at?.split('T')[0] || ''}</td>
+        <td style="color:var(--muted)">${formatDate(b.created_at)}</td>
         <td><button class="btn btn-danger btn-sm" onclick="deleteBlog('${b.id}')">Delete</button></td>
       </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">No posts yet</td></tr>';
   }
@@ -477,14 +527,15 @@
     let image_url = '';
     if (imgFile) image_url = await uploadImage(imgFile, 'blog-images');
     const slug = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    await supabase.from('blog_posts').insert([{
+    await addDoc(collection(db, 'blog_posts'), {
       title,
       category: document.getElementById('b-category').value,
       status: document.getElementById('b-status').value,
       excerpt: document.getElementById('b-excerpt').value,
       content: document.getElementById('b-content').value,
       image_url, slug,
-    }]);
+      created_at: serverTimestamp(),
+    });
     showToast('Post published!');
     loadBlog();
     switchTab(document.querySelector('#panel-blog .tab'), 'blog-list-tab');
@@ -496,15 +547,16 @@
   };
 
   window.deleteBlog = async (id) => {
-    await supabase.from('blog_posts').delete().eq('id', id);
+    await deleteDoc(doc(db, 'blog_posts', id));
     showToast('Post deleted'); loadBlog();
   };
 
   // ── PORTFOLIO ──
   async function loadPortfolio() {
-    const { data } = await supabase.from('portfolio').select('*').order('created_at', { ascending: false });
+    const snap = await getDocs(query(collection(db, 'portfolio'), orderBy('created_at', 'desc')));
+    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const tbody = document.getElementById('port-table');
-    tbody.innerHTML = (data || []).map(p => `
+    tbody.innerHTML = data.map(p => `
       <tr>
         <td style="font-weight:500">${p.title}</td>
         <td>${p.category || ''}</td>
@@ -519,26 +571,28 @@
     const imgFile = document.getElementById('p-img').files[0];
     let image_url = '';
     if (imgFile) image_url = await uploadImage(imgFile, 'portfolio-images');
-    await supabase.from('portfolio').insert([{
+    await addDoc(collection(db, 'portfolio'), {
       title,
       category: document.getElementById('p-category').value,
       description: document.getElementById('p-desc').value,
       link: document.getElementById('p-link').value,
       image_url,
-    }]);
+      created_at: serverTimestamp(),
+    });
     showToast('Project added!'); loadPortfolio();
   };
 
   window.deletePortfolio = async (id) => {
-    await supabase.from('portfolio').delete().eq('id', id);
+    await deleteDoc(doc(db, 'portfolio', id));
     showToast('Deleted'); loadPortfolio();
   };
 
   // ── TESTIMONIALS ──
   async function loadTestimonials() {
-    const { data } = await supabase.from('testimonials').select('*').order('created_at', { ascending: false });
+    const snap = await getDocs(query(collection(db, 'testimonials'), orderBy('created_at', 'desc')));
+    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const tbody = document.getElementById('testi-table');
-    tbody.innerHTML = (data || []).map(t => `
+    tbody.innerHTML = data.map(t => `
       <tr>
         <td style="font-weight:500">${t.client_name}</td>
         <td style="color:var(--muted)">${t.role || ''}</td>
@@ -554,17 +608,18 @@
     const imgFile = document.getElementById('t-img').files[0];
     let photo_url = '';
     if (imgFile) photo_url = await uploadImage(imgFile, 'testimonial-photos');
-    await supabase.from('testimonials').insert([{
+    await addDoc(collection(db, 'testimonials'), {
       client_name: name,
       role: document.getElementById('t-role').value,
       review_text: text,
       photo_url,
-    }]);
+      created_at: serverTimestamp(),
+    });
     showToast('Testimonial saved!'); loadTestimonials();
   };
 
   window.deleteTestimonial = async (id) => {
-    await supabase.from('testimonials').delete().eq('id', id);
+    await deleteDoc(doc(db, 'testimonials', id));
     showToast('Deleted'); loadTestimonials();
   };
 
@@ -585,7 +640,7 @@
     const list = filter === 'all' ? allEnquiries : allEnquiries.filter(e => e.status === filter);
     document.getElementById('eq-list').innerHTML = list.map(e => `
       <div class="enquiry-card ${e.status === 'new' ? 'unread' : ''}" onclick="openEnquiry('${e.id}')">
-        <div class="eq-head"><div class="eq-name">${e.name}</div><div style="display:flex;gap:6px;align-items:center"><span class="badge badge-${e.status === 'new' ? 'new' : 'read'}">${e.status}</span><span class="eq-date">${e.created_at?.split('T')[0]}</span></div></div>
+        <div class="eq-head"><div class="eq-name">${e.name}</div><div style="display:flex;gap:6px;align-items:center"><span class="badge badge-${e.status === 'new' ? 'new' : 'read'}">${e.status}</span><span class="eq-date">${formatDate(e.created_at)}</span></div></div>
         <div class="eq-sector">${e.sector || ''}</div>
         <div class="eq-msg">${e.message || ''}</div>
       </div>`).join('') || '<div style="color:var(--muted);font-size:13px;padding:20px">No enquiries found</div>';
@@ -594,7 +649,7 @@
   window.openEnquiry = async (id) => {
     const e = allEnquiries.find(x => x.id === id);
     if (!e) return;
-    await supabase.from('enquiries').update({ status: 'read' }).eq('id', id);
+    await updateDoc(doc(db, 'enquiries', id), { status: 'read' });
     e.status = 'read';
     document.getElementById('eq-modal-name').textContent = e.name;
     document.getElementById('eq-modal-body').innerHTML = `
@@ -613,8 +668,8 @@
 
   // ── ANALYTICS ──
   async function loadAnalytics() {
-    const { data } = await supabase.from('visitor_logs').select('*').order('last_seen', { ascending: false });
-    allVisitors = data || [];
+    const snap = await getDocs(query(collection(db, 'visitor_logs'), orderBy('last_seen', 'desc')));
+    allVisitors = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const total = allVisitors.reduce((sum, v) => sum + (v.visit_count || 1), 0);
     const mobile = allVisitors.filter(v => v.device === 'Mobile').length;
     const countries = allVisitors.map(v => v.country).filter(Boolean);
@@ -633,13 +688,13 @@
         <td style="font-family:monospace;font-size:11px;color:#185FA5">${v.asn || ''}</td>
         <td>${v.device || ''}</td>
         <td style="text-align:center;font-weight:500">${v.visit_count || 1}</td>
-        <td style="color:var(--muted)">${v.last_seen?.split('T')[0] || ''}</td>
+        <td style="color:var(--muted)">${formatDate(v.last_seen)}</td>
       </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">No visitors yet</td></tr>';
   }
 
   window.exportVisitors = () => {
     const csv = ['IP,Country,City,ISP,ASN,Device,Visits,Last Seen',
-      ...allVisitors.map(v => `${v.ip_address},${v.country},${v.city},${v.isp},${v.asn},${v.device},${v.visit_count},${v.last_seen?.split('T')[0]}`)
+      ...allVisitors.map(v => `${v.ip_address},${v.country},${v.city},${v.isp},${v.asn},${v.device},${v.visit_count},${formatDate(v.last_seen)}`)
     ].join('\n');
     const a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
@@ -647,32 +702,35 @@
   };
 
   // ── SUBSCRIBERS ──
-  async function loadSubscribers() {
-    const { data } = await supabase.from('subscribers').select('*').order('created_at', { ascending: false });
-    allSubscribers = data || [];
+  function renderSubscribers() {
     const tbody = document.getElementById('sub-table');
     tbody.innerHTML = allSubscribers.map(s => `
       <tr>
         <td>${s.email}</td>
-        <td style="color:var(--muted)">${s.created_at?.split('T')[0] || ''}</td>
+        <td style="color:var(--muted)">${formatDate(s.created_at)}</td>
       </tr>`).join('') || '<tr><td colspan="2" style="text-align:center;padding:20px;color:var(--muted)">No subscribers yet</td></tr>';
   }
 
+  async function loadSubscribers() {
+    const snap = await getDocs(query(collection(db, 'subscribers'), orderBy('created_at', 'desc')));
+    allSubscribers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderSubscribers();
+  }
+
   window.exportSubscribers = () => {
-    const csv = ['Email,Date', ...allSubscribers.map(s => `${s.email},${s.created_at?.split('T')[0]}`)].join('\n');
+    const csv = ['Email,Date', ...allSubscribers.map(s => `${s.email},${formatDate(s.created_at)}`)].join('\n');
     const a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
     a.download = 'subscribers.csv'; a.click();
   };
 
-  // ── IMAGE UPLOAD ──
-  async function uploadImage(file, bucket) {
+  // ── IMAGE UPLOAD (Firebase Storage) ──
+  async function uploadImage(file, folder) {
     const ext = file.name.split('.').pop();
-    const name = `${Date.now()}.${ext}`;
-    const { data, error } = await supabase.storage.from(bucket).upload(name, file);
-    if (error) { showToast('Image upload failed'); return ''; }
-    const { data: url } = supabase.storage.from(bucket).getPublicUrl(name);
-    return url.publicUrl;
+    const name = `${folder}/${Date.now()}.${ext}`;
+    const storageRef = ref(storage, name);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
   }
 
   // ── UI HELPERS ──
@@ -726,20 +784,6 @@
     setTimeout(() => t.style.display = 'none', 3000);
   }
   window.showToast = showToast;
-
-  // ── SINGLE INIT ──
-  supabase.auth.onAuthStateChange((event) => {
-    if (event === 'SIGNED_IN' && !realtimeStarted) {
-      realtimeStarted = true;
-      initRealtime();
-    }
-    if (event === 'SIGNED_OUT') {
-      realtimeStarted = false;
-      cleanupRealtime();
-    }
-  });
-
-  checkAuth();
 </script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 import { db } from '../lib/firebase';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { sendNotificationAlert } from '../lib/notifications';
 
 export function initNewsletter() {
   const section = document.querySelector('.py-16.bg-blue-900.text-white form');
@@ -34,6 +35,13 @@ export function initNewsletter() {
           created_at: new Date().toISOString(),
         });
       }
+
+      // Notify owner via email + WhatsApp — non-blocking
+      void sendNotificationAlert({
+        type: 'newsletter',
+        email,
+        message: snapshot.empty ? 'New subscriber added.' : 'Subscriber already existed (duplicate attempt).',
+      });
 
       submitBtn.innerHTML = '<i class="fas fa-check text-green-500 text-xl bounce-animation"></i>';
       emailInput.value = '';
