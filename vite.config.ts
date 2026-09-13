@@ -16,10 +16,10 @@ export default defineConfig({
     },
   },
   build: {
-  outDir: 'dist',
-  minify: 'terser',
-  sourcemap: process.env.NODE_ENV !== 'production',
-  cssCodeSplit: true,
+    outDir: 'dist',
+    minify: 'esbuild',
+    sourcemap: process.env.NODE_ENV !== 'production',
+    cssCodeSplit: true,
   rollupOptions: {
     onwarn(warning, warn) {
       if (warning.code === 'PLUGIN_TIMINGS') return;
