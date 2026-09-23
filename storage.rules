@@ -2,19 +2,28 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Blog images — anyone can read, only authenticated admin can upload/delete
+    // =======================================================================
+    // 1. BLOG IMAGES BUCKET (supabase: 'blog-images')
+    // Policy: "Allow public read blog-images", "Allow authenticated all blog-images"
+    // =======================================================================
     match /blog-images/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // Portfolio images — anyone can read, only authenticated admin can upload/delete
+    // =======================================================================
+    // 2. PORTFOLIO IMAGES BUCKET (supabase: 'portfolio-images')
+    // Policy: "Allow public read portfolio-images", "Allow authenticated all portfolio-images"
+    // =======================================================================
     match /portfolio-images/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // Testimonial photos — anyone can read, only authenticated admin can upload/delete
+    // =======================================================================
+    // 3. TESTIMONIAL PHOTOS BUCKET (supabase: 'testimonial-photos')
+    // Policy: "Allow public read testimonial-photos", "Allow authenticated all testimonial-photos"
+    // =======================================================================
     match /testimonial-photos/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;

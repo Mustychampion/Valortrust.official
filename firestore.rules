@@ -2,72 +2,99 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function: Checks if request is from the single authorized admin UID
-    // Replace "YOUR_SINGLE_USER_UID" with your actual Firebase Auth User UID if restricting admin access to one specific UID
+    // Helper: checks if request is authenticated (Admin)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: checks if request is specifically from authorized admin UID
     function isAdmin() {
-     return request.auth != null && request.auth.uid == "gtrrfog7tlTyUbKL2cr7deBfOgu1";
-
+      return request.auth != null && (
+        request.auth.uid == "gtrrfog7tlTyUbKL2cr7deBfOgu1" ||
+        request.auth.token.admin == true
+      );
     }
 
-    // -----------------------------------------------------------------------
-    // PUBLIC READ-ONLY COLLECTIONS (Blog, Portfolio, Testimonials, Sectors, etc.)
-    // -----------------------------------------------------------------------
+    // =======================================================================
+    // 1. ENQUIRIES TABLE MIGRATION
+    // Supabase Policy: "Allow public inserts" (insert: true), "Allow authenticated all"
+    // =======================================================================
+    match /enquiries/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAuthenticated();
+    }
+
+    // =======================================================================
+    // 2. SUBSCRIBERS TABLE MIGRATION
+    // Supabase Policy: "Allow public inserts" (insert: true), "Allow authenticated all"
+    // =======================================================================
+    match /subscribers/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAuthenticated();
+    }
+
+    // =======================================================================
+    // 3. BLOG POSTS TABLE MIGRATION
+    // Supabase Policy: "Allow public read published" (status == 'published'), "Allow authenticated all"
+    // =======================================================================
     match /blog_posts/{docId} {
-      allow read: if resource.data.status == 'published' || isAdmin();
-      allow create, update, delete: if isAdmin();
+      allow read: if resource.data.status == 'published' || isAuthenticated();
+      allow create, update, delete: if isAuthenticated();
     }
 
+    // =======================================================================
+    // 4. PORTFOLIO TABLE MIGRATION
+    // Supabase Policy: "Allow public read" (select: true), "Allow authenticated all"
+    // =======================================================================
     match /portfolio/{docId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isAuthenticated();
     }
 
+    // =======================================================================
+    // 5. TESTIMONIALS TABLE MIGRATION
+    // Supabase Policy: "Allow public read" (select: true), "Allow authenticated all"
+    // =======================================================================
     match /testimonials/{docId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isAuthenticated();
+    }
+
+    // =======================================================================
+    // 6. VISITOR LOGS TABLE MIGRATION
+    // Supabase Policy: "Allow public insert and update via anon", "Allow authenticated select"
+    // =======================================================================
+    match /visitor_logs/{docId} {
+      allow create, update: if true;
+      allow read, delete: if isAuthenticated();
+    }
+
+    // =======================================================================
+    // ADDITIONAL SITE COLLECTIONS (Contact Submissions, Sectors, Profiles, Bio, Skills)
+    // =======================================================================
+    match /contact_submissions/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAuthenticated();
     }
 
     match /sectors/{docId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isAuthenticated();
     }
 
     match /profiles/{docId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isAuthenticated();
     }
 
     match /site_bio/{docId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isAuthenticated();
     }
 
     match /skills/{docId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    // -----------------------------------------------------------------------
-    // PUBLIC SUBMISSION COLLECTIONS (Enquiries, Subscribers, Contact, Visitor Logs)
-    // -----------------------------------------------------------------------
-    match /enquiries/{docId} {
-      allow create: if true;
-      allow read, update, delete: if isAdmin();
-    }
-
-    match /subscribers/{docId} {
-      allow create: if true;
-      allow read, update, delete: if isAdmin();
-    }
-
-    match /contact_submissions/{docId} {
-      allow create: if true;
-      allow read, update, delete: if isAdmin();
-    }
-
-    match /visitor_logs/{docId} {
-      allow create, update: if true;
-      allow read, delete: if isAdmin();
+      allow create, update, delete: if isAuthenticated();
     }
   }
 }

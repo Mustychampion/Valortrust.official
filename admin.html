@@ -726,11 +726,17 @@
 
   // ── IMAGE UPLOAD (Firebase Storage) ──
   async function uploadImage(file, folder) {
-    const ext = file.name.split('.').pop();
-    const name = `${folder}/${Date.now()}.${ext}`;
-    const storageRef = ref(storage, name);
-    await uploadBytes(storageRef, file);
-    return await getDownloadURL(storageRef);
+    try {
+      const ext = file.name.split('.').pop();
+      const name = `${folder}/${Date.now()}.${ext}`;
+      const storageRef = ref(storage, name);
+      await uploadBytes(storageRef, file);
+      return await getDownloadURL(storageRef);
+    } catch (err) {
+      console.warn('Storage upload notice:', err);
+      showToast('Notice: Image not uploaded (Storage not active). Document saved.');
+      return '';
+    }
   }
 
   // ── UI HELPERS ──
