@@ -1,5 +1,5 @@
 # Robots.txt for ValorTrust Integrated Services LTD
-# Corporate Portal: https://valortrust-official.vercel.app
+# Corporate Portal: https://www.valortrustgroupofco.name.ng
 
 User-agent: *
 Allow: /
@@ -19,4 +19,4 @@ Disallow: /*.json$
 User-agent: Bingbot
 Crawl-delay: 1
 
-Sitemap: https://valortrust-official.vercel.app/sitemap.xml
+Sitemap: https://www.valortrustgroupofco.name.ng/sitemap.xml
