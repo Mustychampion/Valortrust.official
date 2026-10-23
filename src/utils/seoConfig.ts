@@ -12,7 +12,7 @@ export const getSiteUrl = (): string => {
   if (envUrl && typeof envUrl === 'string' && envUrl.trim().length > 0) {
     return envUrl.replace(/\/+$/, '');
   }
-  return 'https://valortrust-official.vercel.app';
+  return 'https://www.valortrustgroupofco.name.ng';
 };
 
 export const SITE_URL = getSiteUrl();
@@ -53,7 +53,7 @@ export const CORPORATE_ENTITY = {
     'Nigeria (Nationwide)',
   ],
   logo: `${SITE_URL}/src/Images/Valortrust%20logo.webp`,
-  image: `${SITE_URL}/Hero.png`,
+  image: `${SITE_URL}/og-image.jpg`,
   socialLinks: [
     'https://wa.me/2348039535043',
   ],
